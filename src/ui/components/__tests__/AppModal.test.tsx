@@ -37,6 +37,7 @@ describe("AppModal", () => {
   });
 
   it("Escape key should dismiss the app modal", async () => {
+    // This test works! Lets figure out how! We should be able to see the same thing
     const { findByText } = await render(<App />, {
       graphqlMocks,
       store,
