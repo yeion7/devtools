@@ -7,10 +7,11 @@ import classnames from "classnames";
 import PanelEditor from "./PanelEditor";
 import BreakpointNavigation from "devtools/client/debugger/src/components/SecondaryPanes/Breakpoints/BreakpointNavigation";
 import Widget from "./Widget";
-import { connect } from "react-redux";
+import { connect, useDispatch, useSelector } from "react-redux";
 import { actions } from "ui/actions";
 import { selectors } from "ui/reducers";
 import { getExecutionPoint } from "devtools/client/debugger/src/reducers/pause";
+const { getContext } = require("devtools/client/debugger/src/selectors");
 import { inBreakpointPanel } from "devtools/client/debugger/src/utils/editor";
 import PanelSummary from "./PanelSummary";
 import FirstEditNag from "./FirstEditNag";
@@ -18,6 +19,7 @@ import hooks from "ui/hooks";
 import { Nag } from "ui/hooks/users";
 import { AnalysisError } from "ui/state/app";
 import { prefs } from "ui/utils/prefs";
+import { getIndexingProgress } from "ui/actions/app";
 
 function getPanelWidth({ editor }) {
   // The indent value is an adjustment for the distance from the gutter's left edge
@@ -31,9 +33,11 @@ function Panel({
   analysisPoints,
   breakpoint,
   currentTime,
+  cx,
   editor,
   executionPoint,
   insertAt,
+  setBreakpointOptions,
   setHoveredItem,
   clearHoveredItem,
 }) {
@@ -48,10 +52,18 @@ function Panel({
     !!analysisPoints?.data.find(
       ({ point, time }) => point == executionPoint && time == currentTime
     );
+  const indexingProgress = useSelector(getIndexingProgress);
   const isHot =
     analysisPoints &&
     (analysisPoints.error === AnalysisError.TooManyPoints ||
       (analysisPoints.data.length || 0) > prefs.maxHitsDisplayed);
+
+  useEffect(() => {
+    if (indexingProgress === 100) {
+      console.log("QUERYING FOR BREAKPOINT");
+      setBreakpointOptions(cx, breakpoint.location, breakpoint.options);
+    }
+  }, [indexingProgress, cx, breakpoint.location, breakpoint.options]);
 
   useEffect(() => {
     const updateWidth = () => setWidth(getPanelWidth(editor));
@@ -136,10 +148,12 @@ export default connect(
       breakpoint.options.condition
     ),
     currentTime: selectors.getCurrentTime(state),
+    cx: getContext(state),
     executionPoint: getExecutionPoint(state),
   }),
   {
-    setHoveredItem: actions.setHoveredItem,
     clearHoveredItem: actions.clearHoveredItem,
+    setBreakpointOptions: actions.setBreakpointOptions,
+    setHoveredItem: actions.setHoveredItem,
   }
 )(Panel);
