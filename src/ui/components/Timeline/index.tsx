@@ -121,17 +121,18 @@ class Timeline extends Component<PropsFromRedux, { isDragging: boolean }> {
 
   onPlayerMouseUp = (e: MouseEvent | React.MouseEvent) => {
     const {
-      hoverTime,
-      isFocusing,
-      seek,
       clearPendingComment,
-      setTimelineToTime,
-      setTimelineState,
       currentTime,
-      focusRegion,
-      nonLoadingTimeRanges,
       enterFocusMode,
+      focusRegion,
+      hoverTime,
+      indexingProgress,
+      isFocusing,
+      nonLoadingTimeRanges,
+      seek,
       setFocusAroundTime,
+      setTimelineState,
+      setTimelineToTime,
     } = this.props;
     const { isDragging } = this.state;
     // if the user clicked on a comment marker, we already seek to the comment's
@@ -167,7 +168,10 @@ class Timeline extends Component<PropsFromRedux, { isDragging: boolean }> {
     }
 
     trackEvent("timeline.progress_select");
-    if (!(hoverTime === null || clickedOnCommentMarker || clickedOnUnfocusedRegion)) {
+    if (
+      !(hoverTime === null || clickedOnCommentMarker || clickedOnUnfocusedRegion) &&
+      indexingProgress === 100
+    ) {
       const event = mostRecentPaintOrMouseEvent(mouseTime);
       if (event && event.point) {
         if (!seek(event.point, mouseTime, false)) {
@@ -436,38 +440,39 @@ class Timeline extends Component<PropsFromRedux, { isDragging: boolean }> {
 
 const connector = connect(
   (state: UIState) => ({
-    loadedRegions: selectors.getLoadedRegions(state)?.loaded,
-    zoomRegion: selectors.getZoomRegion(state),
-    currentTime: selectors.getCurrentTime(state),
-    hoverTime: selectors.getHoverTime(state),
-    precachedTime: selectors.getPlaybackPrecachedTime(state),
-    playback: selectors.getPlayback(state),
-    recordingDuration: selectors.getRecordingDuration(state),
-    timelineDimensions: selectors.getTimelineDimensions(state),
-    messages: selectors.getMessagesForTimeline(state),
-    viewMode: selectors.getViewMode(state),
-    selectedPanel: selectors.getSelectedPanel(state),
-    pointsForHoveredLineNumber: selectors.getPointsForHoveredLineNumber(state),
-    hoveredItem: selectors.getHoveredItem(state),
-    hoveredComment: selectors.getHoveredComment(state),
     clickEvents: selectors.getEventsForType(state, "mousedown"),
-    videoUrl: selectors.getVideoUrl(state),
-    isFocusing: selectors.getIsFocusing(state),
+    currentTime: selectors.getCurrentTime(state),
     focusRegion: selectors.getFocusRegion(state),
+    hoverTime: selectors.getHoverTime(state),
+    hoveredComment: selectors.getHoveredComment(state),
+    hoveredItem: selectors.getHoveredItem(state),
+    indexingProgress: selectors.getIndexingProgress(state),
+    isFocusing: selectors.getIsFocusing(state),
+    loadedRegions: selectors.getLoadedRegions(state)?.loaded,
+    messages: selectors.getMessagesForTimeline(state),
     nonLoadingTimeRanges: selectors.getNonLoadingTimeRanges(state),
+    playback: selectors.getPlayback(state),
+    pointsForHoveredLineNumber: selectors.getPointsForHoveredLineNumber(state),
+    precachedTime: selectors.getPlaybackPrecachedTime(state),
+    recordingDuration: selectors.getRecordingDuration(state),
+    selectedPanel: selectors.getSelectedPanel(state),
+    timelineDimensions: selectors.getTimelineDimensions(state),
+    videoUrl: selectors.getVideoUrl(state),
+    viewMode: selectors.getViewMode(state),
+    zoomRegion: selectors.getZoomRegion(state),
   }),
   {
-    setTimelineToTime: actions.setTimelineToTime,
-    setTimelineState: actions.setTimelineState,
-    updateTimelineDimensions: actions.updateTimelineDimensions,
-    seek: actions.seek,
-    seekToTime: actions.seekToTime,
-    startPlayback: actions.startPlayback,
-    stopPlayback: actions.stopPlayback,
-    replayPlayback: actions.replayPlayback,
     clearPendingComment: actions.clearPendingComment,
     enterFocusMode: actions.enterFocusMode,
+    replayPlayback: actions.replayPlayback,
+    seek: actions.seek,
+    seekToTime: actions.seekToTime,
     setFocusAroundTime: actions.setFocusAroundTime,
+    setTimelineState: actions.setTimelineState,
+    setTimelineToTime: actions.setTimelineToTime,
+    startPlayback: actions.startPlayback,
+    stopPlayback: actions.stopPlayback,
+    updateTimelineDimensions: actions.updateTimelineDimensions,
   }
 );
 type PropsFromRedux = ConnectedProps<typeof connector>;
