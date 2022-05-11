@@ -1,33 +1,18 @@
-import { Action } from "redux";
-import { UIStore, UIThunkAction } from ".";
 import { unprocessedRegions, KeyboardEvent } from "@recordreplay/protocol";
-import { ThreadFront } from "protocol/thread/thread";
-import * as selectors from "ui/reducers/app";
-import { Canvas, ReplayEvent, ReplayNavigationEvent } from "ui/state/app";
-import { Workspace } from "ui/types";
-import { client, sendMessage } from "protocol/socket";
-import groupBy from "lodash/groupBy";
-import { compareBigInt } from "ui/utils/helpers";
-import { isTest } from "ui/utils/environment";
-import tokenManager from "ui/utils/tokenManager";
-import {
-  hideCommandPalette,
-  setSelectedPanel,
-  setSelectedPrimaryPanel,
-  setShowVideoPanel,
-  setToolboxLayout,
-  setViewMode,
-} from "./layout";
-import { CommandKey } from "ui/components/CommandPalette/CommandPalette";
 import { openQuickOpen } from "devtools/client/debugger/src/actions/quick-open";
-import { getRecordingId } from "ui/utils/recording";
 import { prefs } from "devtools/client/debugger/src/utils/prefs";
 import { shallowEqual } from "devtools/client/debugger/src/utils/resource/compare";
+import groupBy from "lodash/groupBy";
+import { client, sendMessage } from "protocol/socket";
+import { ThreadFront } from "protocol/thread/thread";
+import { CommandKey } from "ui/components/CommandPalette/CommandPalette";
+import * as selectors from "ui/reducers/app";
 import { getShowVideoPanel } from "ui/reducers/layout";
-import { toggleFocusMode } from "./timeline";
-import { getTheme } from "ui/reducers/app";
-
-export * from "../reducers/app";
+import { Canvas, ReplayEvent, ReplayNavigationEvent } from "ui/state/app";
+import { isTest } from "ui/utils/environment";
+import { compareBigInt } from "ui/utils/helpers";
+import { getRecordingId } from "ui/utils/recording";
+import tokenManager from "ui/utils/tokenManager";
 
 import {
   setRecordingDuration,
@@ -41,6 +26,20 @@ import {
   setIsNodePickerActive,
   setCanvas as setCanvasAction,
 } from "../reducers/app";
+
+import {
+  hideCommandPalette,
+  setSelectedPanel,
+  setSelectedPrimaryPanel,
+  setShowVideoPanel,
+  setToolboxLayout,
+  setViewMode,
+} from "./layout";
+import { toggleFocusMode } from "./timeline";
+
+import { UIStore, UIThunkAction } from ".";
+
+export * from "../reducers/app";
 
 export function setupApp(store: UIStore) {
   if (!isTest()) {
@@ -132,7 +131,7 @@ function onNavigationEvents(events: ReplayNavigationEvent[], store: UIStore) {
 
 export function toggleTheme(): UIThunkAction {
   return (dispatch, getState) => {
-    const theme = getTheme(getState());
+    const theme = selectors.getTheme(getState());
     const newTheme = theme == "dark" ? "light" : "dark";
     dispatch(updateTheme(newTheme));
   };

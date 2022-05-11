@@ -1,18 +1,22 @@
 import { ExecutionPoint, PauseId } from "@recordreplay/protocol";
-import { Pause, ThreadFront } from "protocol/thread";
-import { client, log, sendMessage } from "protocol/socket";
 import {
-  getGraphicsAtTime,
-  paintGraphics,
-  mostRecentPaintOrMouseEvent,
-  nextPaintOrMouseEvent,
-  nextPaintEvent,
-  previousPaintEvent,
-  getFirstMeaningfulPaint,
-  precacheScreenshots,
-  snapTimeForPlayback,
   Video,
+  getFirstMeaningfulPaint,
+  getGraphicsAtTime,
+  mostRecentPaintOrMouseEvent,
+  nextPaintEvent,
+  nextPaintOrMouseEvent,
+  paintGraphics,
+  precacheScreenshots,
+  previousPaintEvent,
+  snapTimeForPlayback,
 } from "protocol/graphics";
+import { client, log, sendMessage } from "protocol/socket";
+import { Pause, ThreadFront } from "protocol/thread";
+import { PauseEventArgs } from "protocol/thread/thread";
+import { assert, waitForTime } from "protocol/utils";
+import { Action } from "redux";
+import { getFirstComment } from "ui/hooks/comments/comments";
 import {
   getCurrentTime,
   getHoveredItem,
@@ -23,19 +27,14 @@ import {
   getShowFocusModeControls,
 } from "ui/reducers/timeline";
 import { TimelineState, ZoomRegion, HoveredItem, FocusRegion } from "ui/state/timeline";
-
-import { UIStore, UIThunkAction } from ".";
-import { Action } from "redux";
-import { PauseEventArgs } from "protocol/thread/thread";
 import { getPausePointParams, getTest } from "ui/utils/environment";
-import { assert, waitForTime } from "protocol/utils";
-import { features } from "ui/utils/prefs";
 import KeyShortcuts, { isEditableElement } from "ui/utils/key-shortcuts";
-import { getFirstComment } from "ui/hooks/comments/comments";
-
+import { features } from "ui/utils/prefs";
 import { trackEvent } from "ui/utils/telemetry";
 
-import { hideModal } from "./app";
+import { UIStore, UIThunkAction } from ".";
+
+import { getIsIndexed } from "./app";
 
 export type SetTimelineStateAction = Action<"set_timeline_state"> & {
   state: Partial<TimelineState>;
@@ -246,7 +245,8 @@ export function seek(
   pauseId?: PauseId
 ): UIThunkAction<boolean> {
   return (dispatch, getState) => {
-    const focusRegion = getFocusRegion(getState());
+    const state = getState();
+    const focusRegion = getFocusRegion(state);
     const pause = pauseId !== undefined ? Pause.getById(pauseId) : undefined;
 
     if (focusRegion && (time < focusRegion.startTime || time > focusRegion.endTime)) {
@@ -258,7 +258,11 @@ export function seek(
     if (pause) {
       ThreadFront.timeWarpToPause(pause);
     } else {
-      ThreadFront.timeWarp(point, time, hasFrames);
+      if (getIsIndexed(state)) {
+        // start precaching?
+      } else {
+        ThreadFront.timeWarp(point, time, hasFrames);
+      }
     }
     return true;
   };
