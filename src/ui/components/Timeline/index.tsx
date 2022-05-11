@@ -168,21 +168,21 @@ class Timeline extends Component<PropsFromRedux, { isDragging: boolean }> {
     }
 
     trackEvent("timeline.progress_select");
-    if (
-      !(hoverTime === null || clickedOnCommentMarker || clickedOnUnfocusedRegion) &&
-      indexingProgress === 100
-    ) {
-      const event = mostRecentPaintOrMouseEvent(mouseTime);
-      if (event && event.point) {
-        if (!seek(event.point, mouseTime, false)) {
-          // if seeking to the new point failed because it is in an unloaded region,
-          // we reset the timeline to the current time
-          setTimelineToTime(ThreadFront.currentTime);
-          setTimelineState({ currentTime: ThreadFront.currentTime });
-        }
-        clearPendingComment();
-      }
-    }
+    // if (
+    //   !(hoverTime === null || clickedOnCommentMarker || clickedOnUnfocusedRegion) &&
+    //   indexingProgress === 100
+    // ) {
+    //   const event = mostRecentPaintOrMouseEvent(mouseTime);
+    //   if (event && event.point) {
+    //     if (!seek(event.point, mouseTime, false)) {
+    //       // if seeking to the new point failed because it is in an unloaded region,
+    //       // we reset the timeline to the current time
+    //       setTimelineToTime(ThreadFront.currentTime);
+    //       setTimelineState({ currentTime: ThreadFront.currentTime });
+    //     }
+    //     clearPendingComment();
+    //   }
+    // }
   };
 
   isHovering() {
