@@ -1,4 +1,4 @@
-import { TimeStampedPointRange } from "@recordreplay/protocol";
+import { TimeStampedPoint, TimeStampedPointRange } from "@recordreplay/protocol";
 import { format, isValid } from "date-fns";
 import { clamp } from "lodash";
 import { FocusRegion, ZoomRegion } from "ui/state/timeline";
@@ -214,9 +214,11 @@ export function isInTrimSpan(time: number, focusRegion: FocusRegion) {
 }
 
 export function isPointInRegions(regions: TimeStampedPointRange[], point: string) {
-  return regions.find(
-    r => BigInt(point) >= BigInt(r.begin.point) && BigInt(point) <= BigInt(r.end.point)
-  );
+  return regions.find(r => isPointInRegion(r, point));
+}
+
+export function isPointInRegion(region: TimeStampedPointRange, point: string): boolean {
+  return BigInt(point) >= BigInt(region.begin.point) && BigInt(point) <= BigInt(region.end.point);
 }
 
 export function isTimeInRegions(time: number, regions?: TimeStampedPointRange[]): boolean {
