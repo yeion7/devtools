@@ -1,25 +1,41 @@
 import { loadedRegions, TimeStampedPoint, TimeStampedPointRange } from "@recordreplay/protocol";
-import { Deferred } from "next/dist/server/image-optimizer";
 import { isPointInRegion, isPointInRegions, isSameTimeStampedPointRange } from "ui/utils/timeline";
+import { defer, Deferred } from "./utils";
 
 class LoadManager {
   private waiters = new Map<string, Deferred<boolean>>();
   private loaded: loadedRegions = { loaded: [], loading: [], indexed: [] };
 
   async waitForPointLoaded(point: TimeStampedPoint) {
+    if (this.isLoaded(point.point)) {
+      return true;
+    }
+
     if (!this.waiters.has(point.point)) {
-      this.waiters.set(point.point, new Deferred<boolean>());
+      this.waiters.set(point.point, defer());
     }
     return this.waiters.get(point.point)!.promise;
   }
 
   async waitForRangeLoaded(range: TimeStampedPointRange) {
-    this.waiters.set(`${range.begin.point}:${range.end.point}`, new Deferred<boolean>());
+    const key = `${range.begin.point}:${range.end.point}`;
+
+    if (this.isLoaded(key)) {
+      return true;
+    }
+
+    if (!this.waiters.has(key)) {
+      this.waiters.set(key, defer());
+    }
+    return this.waiters.get(key)!.promise;
   }
 
   async waitForLoadingFinished() {
+    if (this.isLoaded("finished")) {
+      return true;
+    }
     if (!this.waiters.has("finished")) {
-      this.waiters.set("finished", new Deferred<boolean>());
+      this.waiters.set("finished", defer());
     }
     return this.waiters.get("finished");
   }
@@ -43,11 +59,6 @@ class LoadManager {
     if (match) {
       const begin = match[1];
       const end = match[2];
-      console.log({ begin, end });
-      console.log(this.loaded.loaded.map(r => isPointInRegion(r, begin)));
-      console.log(this.loaded.loaded.map(r => isPointInRegion(r, end)));
-      console.log(this.loaded.indexed.map(r => isPointInRegion(r, begin)));
-      console.log(this.loaded.indexed.map(r => isPointInRegion(r, end)));
       return (
         this.loaded.loaded.some(r => isPointInRegion(r, begin) && isPointInRegion(r, end)) &&
         this.loaded.indexed.some(r => isPointInRegion(r, begin) && isPointInRegion(r, end))
@@ -66,7 +77,6 @@ class LoadManager {
   updateLoadedStatus(loaded: loadedRegions) {
     this.loaded = loaded;
     for (const [key, value] of this.waiters.entries()) {
-      console.log({ key, value });
       if (this.isLoaded(key)) {
         value.resolve(true);
         this.waiters.delete(key);

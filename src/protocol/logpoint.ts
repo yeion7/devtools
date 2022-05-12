@@ -19,6 +19,7 @@ import { UIStore } from "ui/actions";
 import { setAnalysisError, setAnalysisPoints } from "ui/reducers/app";
 import { getAnalysisPointsForLocation } from "ui/reducers/app";
 import { ProtocolError } from "ui/state/app";
+import loadManager from "./loadManager";
 
 const { prefs } = require("ui/utils/prefs");
 
@@ -226,7 +227,8 @@ export async function setLogpoint(
   condition: string,
   showInConsole: boolean = true
 ) {
-  await ThreadFront.ensureAllSources();
+  await Promise.all([loadManager.waitForLoadingFinished(), ThreadFront.ensureAllSources()]);
+  console.log("FINISHED");
   const sourceIds = ThreadFront.getCorrespondingSourceIds(location.sourceId);
   const { line, column } = location;
   const locations = sourceIds.map(sourceId => ({ sourceId, line, column }));
