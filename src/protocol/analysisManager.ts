@@ -13,6 +13,7 @@ import {
 } from "@recordreplay/protocol";
 import { sendMessage, addEventListener } from "protocol/socket";
 import { ThreadFront } from "protocol/thread";
+import loadManager from "./loadManager";
 
 import { assert } from "./utils";
 
@@ -54,7 +55,7 @@ class AnalysisManager {
   }
 
   async runAnalysis<T>(params: AnalysisParams, handler: AnalysisHandler<T>) {
-    await ThreadFront.ensureAllSources();
+    await Promise.all([ThreadFront.ensureAllSources(), loadManager.waitForLoadingFinished()]);
     const { analysisId } = await sendMessage(
       "Analysis.createAnalysis",
       {
