@@ -24,6 +24,7 @@ import { RuleFront } from "./rule";
 import { StyleFront } from "./style";
 import { StyleSheetFront } from "./styleSheet";
 import { NodeBoundsFront } from "./bounds";
+import loadManager from "protocol/loadManager";
 
 const pausesById = new Map<PauseId, Pause>();
 
@@ -135,9 +136,10 @@ export class Pause {
     this.pauseIdWaiter.resolve(pauseId);
   }
 
-  create(point: ExecutionPoint, time: number) {
+  async create(point: ExecutionPoint, time: number) {
     assert(!this.createWaiter, "createWaiter already set");
     assert(!this.pauseId, "pauseId already set");
+    await loadManager.waitForPointLoaded({ point, time });
     this.createWaiter = client.Session.createPause({ point }, this.sessionId).then(
       ({ pauseId, stack, data }) => {
         this._setPauseId(pauseId);

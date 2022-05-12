@@ -12,6 +12,7 @@ class LoadManager {
     }
 
     if (!this.waiters.has(point.point)) {
+      console.log(`WAITING FOR ${point.point}`);
       this.waiters.set(point.point, defer());
     }
     return this.waiters.get(point.point)!.promise;
@@ -25,6 +26,7 @@ class LoadManager {
     }
 
     if (!this.waiters.has(key)) {
+      console.log(`WAITING FOR ${key}`);
       this.waiters.set(key, defer());
     }
     return this.waiters.get(key)!.promise;
@@ -34,7 +36,9 @@ class LoadManager {
     if (this.isLoaded("finished")) {
       return true;
     }
+
     if (!this.waiters.has("finished")) {
+      console.log(`WAITING FOR FINISHED`);
       this.waiters.set("finished", defer());
     }
     return this.waiters.get("finished");
@@ -52,6 +56,8 @@ class LoadManager {
           return false;
         }
       }
+
+      console.log(`${key} RESOLVED`);
       return true;
     }
 
@@ -59,16 +65,25 @@ class LoadManager {
     if (match) {
       const begin = match[1];
       const end = match[2];
-      return (
+
+      const resolved =
         this.loaded.loaded.some(r => isPointInRegion(r, begin) && isPointInRegion(r, end)) &&
-        this.loaded.indexed.some(r => isPointInRegion(r, begin) && isPointInRegion(r, end))
-      );
+        this.loaded.indexed.some(r => isPointInRegion(r, begin) && isPointInRegion(r, end));
+      if (resolved) {
+        console.log(`${key} RESOLVED`);
+      }
+
+      return resolved;
     }
 
     if (key.match(/\d+/)) {
-      return Boolean(
+      const resolved = Boolean(
         isPointInRegions(this.loaded.loaded, key) && isPointInRegions(this.loaded.indexed, key)
       );
+      if (resolved) {
+        console.log(`${key} RESOLVED`);
+      }
+      return resolved;
     }
 
     throw `Invalid key for load manager: ${key}`;
