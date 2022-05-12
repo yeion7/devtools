@@ -1,5 +1,6 @@
 import { loadedRegions, TimeStampedPoint, TimeStampedPointRange } from "@recordreplay/protocol";
 import { isPointInRegion, isPointInRegions, isSameTimeStampedPointRange } from "ui/utils/timeline";
+
 import { defer, Deferred } from "./utils";
 
 class LoadManager {
@@ -106,6 +107,7 @@ class LoadManager {
   }
 
   updateLoadedStatus(loaded: loadedRegions) {
+    console.log(loaded);
     this.loaded = loaded;
     for (const [key, value] of this.waiters.entries()) {
       if (this.isLoaded(key)) {
