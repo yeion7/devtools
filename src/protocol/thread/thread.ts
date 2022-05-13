@@ -358,9 +358,9 @@ class _ThreadFront {
 
   async warpToPauseNearTime(time: number) {
     // @ts-ignore
-    const { point } = await sendMessage("Session.getPointNearTime", { time });
-    const pause = new Pause(this.sessionId!);
-    pause.create(point.point, point.time);
+    const { point } = await sendMessage("Session.getPointNearTime", { time }, this.sessionId!);
+    const pause = this.ensurePause(point.point, point.time);
+    await pause.createWaiter;
     this.timeWarpToPause(pause);
   }
 
@@ -368,6 +368,7 @@ class _ThreadFront {
     log(`TimeWarp ${pause.point} using existing pause`);
 
     const { point, time, hasFrames } = pause;
+    console.log({ point, time, hasFrames });
     assert(
       point && time && typeof hasFrames === "boolean",
       "point, time or hasFrames not set on pause"

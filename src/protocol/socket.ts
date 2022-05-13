@@ -253,6 +253,7 @@ function onSocketError(evt: Event, initial: boolean): UIThunkAction {
 }
 
 export function log(text: string) {
+  console.log(text);
   // Don't actually log anything. This is a convenient place to add a logpoint
   // when reviewing recordings of the viewer.
 }
