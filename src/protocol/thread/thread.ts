@@ -38,6 +38,7 @@ import {
   requestBodyData,
 } from "@recordreplay/protocol";
 import uniqueId from "lodash/uniqueId";
+import loadManager from "protocol/loadManager";
 
 import { MappedLocationCache } from "../mapped-location-cache";
 import { client, log, addEventListener, sendMessage } from "../socket";
@@ -302,6 +303,7 @@ class _ThreadFront {
       // TODO Remove this once we have a better region loading indicator
       // Log loaded regions to help with diagnostics.
       console.debug("LoadedRegions", parameters);
+      loadManager.updateLoadedStatus(parameters);
       listenerCallback(parameters);
     });
 
@@ -352,6 +354,14 @@ class _ThreadFront {
     this.emit("paused", { point, hasFrames, time });
 
     this._precacheResumeTargets();
+  }
+
+  async warpToPauseNearTime(time: number) {
+    // @ts-ignore
+    const { point } = await sendMessage("Session.getPointNearTime", { time });
+    const pause = new Pause(this.sessionId!);
+    pause.create(point.point, point.time);
+    this.timeWarpToPause(pause);
   }
 
   timeWarpToPause(pause: Pause) {

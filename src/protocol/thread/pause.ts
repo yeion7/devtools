@@ -139,9 +139,8 @@ export class Pause {
   async create(point: ExecutionPoint, time: number) {
     assert(!this.createWaiter, "createWaiter already set");
     assert(!this.pauseId, "pauseId already set");
-    await loadManager.waitForPointLoaded({ point, time });
-    this.createWaiter = client.Session.createPause({ point }, this.sessionId).then(
-      ({ pauseId, stack, data }) => {
+    this.createWaiter = loadManager.waitForPointLoaded({ point, time }).then(() =>
+      client.Session.createPause({ point }, this.sessionId).then(({ pauseId, stack, data }) => {
         this._setPauseId(pauseId);
         this.point = point;
         this.time = time;
@@ -151,7 +150,7 @@ export class Pause {
           this.stack = stack.map(id => this.frames.get(id)!);
         }
         pausesById.set(pauseId, this);
-      }
+      })
     );
   }
 

@@ -259,7 +259,7 @@ export function seek(
       ThreadFront.timeWarpToPause(pause);
     } else {
       if (getIsIndexed(state)) {
-        // start precaching?
+        ThreadFront.warpToPauseNearTime(time);
       } else {
         ThreadFront.timeWarp(point, time, hasFrames);
       }
