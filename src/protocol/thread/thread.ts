@@ -335,16 +335,16 @@ class _ThreadFront {
   timeWarp(point: ExecutionPoint, time: number, hasFrames?: boolean, force?: boolean) {
     log(`TimeWarp ${point}`);
 
-    // The warp callback is used to change the locations where the thread is
-    // warping to.
-    if (this.warpCallback && !force) {
-      const newTarget = this.warpCallback(point, time, hasFrames);
-      if (newTarget) {
-        point = newTarget.point;
-        time = newTarget.time;
-        hasFrames = newTarget.hasFrames;
-      }
-    }
+    // // The warp callback is used to change the locations where the thread is
+    // // warping to.
+    // if (this.warpCallback && !force) {
+    //   const newTarget = this.warpCallback(point, time, hasFrames);
+    //   if (newTarget) {
+    //     point = newTarget.point;
+    //     time = newTarget.time;
+    //     hasFrames = newTarget.hasFrames;
+    //   }
+    // }
 
     this.currentPoint = point;
     this.currentTime = time;

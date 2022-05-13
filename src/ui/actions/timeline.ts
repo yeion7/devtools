@@ -3,7 +3,6 @@ import {
   Video,
   getFirstMeaningfulPaint,
   getGraphicsAtTime,
-  mostRecentPaintOrMouseEvent,
   nextPaintEvent,
   nextPaintOrMouseEvent,
   paintGraphics,
@@ -34,8 +33,6 @@ import { trackEvent } from "ui/utils/telemetry";
 
 import { UIStore, UIThunkAction } from ".";
 
-import { getIsIndexed } from "./app";
-
 export type SetTimelineStateAction = Action<"set_timeline_state"> & {
   state: Partial<TimelineState>;
 };
@@ -65,7 +62,6 @@ const DEFAULT_FOCUS_WINDOW_MAX_LENGTH = 5000;
 export async function setupTimeline(store: UIStore) {
   const dispatch = store.dispatch;
   ThreadFront.on("paused", args => dispatch(onPaused(args)));
-  ThreadFront.warpCallback = onWarp(store);
 
   const shortcuts = new KeyShortcuts({
     Left: ev => {
@@ -142,27 +138,6 @@ async function getInitialPausePoint(recordingId: string) {
   }
 }
 
-function onWarp(store: UIStore) {
-  return function (point: ExecutionPoint, time: number) {
-    const { startTime, endTime } = getZoomRegion(store.getState());
-    if (time < startTime) {
-      const startEvent = mostRecentPaintOrMouseEvent(startTime);
-      if (startEvent) {
-        return { point: startEvent.point, time: startTime };
-      }
-    }
-
-    if (time > endTime) {
-      const endEvent = mostRecentPaintOrMouseEvent(endTime);
-      if (endEvent) {
-        return { point: endEvent.point, time: endTime };
-      }
-    }
-
-    return null;
-  };
-}
-
 function onPaused({ point, time, hasFrames }: PauseEventArgs): UIThunkAction {
   return async dispatch => {
     updateUrl({ point, time, hasFrames });
@@ -197,20 +172,20 @@ export function setTimelineToTime(time: number | null, updateGraphics = true): U
       return;
     }
 
-    try {
-      const currentTime = getCurrentTime(stateBeforeScreenshot);
-      const screenshotTime = time || currentTime;
-      const { screen, mouse } = await getGraphicsAtTime(screenshotTime);
-      const stateAfterScreenshot = getState();
+    // try {
+    //   const currentTime = getCurrentTime(stateBeforeScreenshot);
+    //   const screenshotTime = time || currentTime;
+    //   const { screen, mouse } = await getGraphicsAtTime(screenshotTime);
+    //   const stateAfterScreenshot = getState();
 
-      if (getHoverTime(stateAfterScreenshot) !== time) {
-        return;
-      }
+    //   if (getHoverTime(stateAfterScreenshot) !== time) {
+    //     return;
+    //   }
 
-      const playing = !!getPlayback(stateAfterScreenshot);
-      paintGraphics(screen, mouse, playing);
-      Video.seek(currentTime);
-    } catch {}
+    //   const playing = !!getPlayback(stateAfterScreenshot);
+    //   paintGraphics(screen, mouse, playing);
+    //   Video.seek(currentTime);
+    // } catch {}
   };
 }
 
@@ -258,31 +233,32 @@ export function seek(
     if (pause) {
       ThreadFront.timeWarpToPause(pause);
     } else {
-      if (getIsIndexed(state)) {
-        ThreadFront.warpToPauseNearTime(time);
-      } else {
-        ThreadFront.timeWarp(point, time, hasFrames);
-      }
+      ThreadFront.timeWarp(point, time, hasFrames);
     }
     return true;
   };
 }
 
 export function seekToTime(targetTime: number): UIThunkAction {
-  return dispatch => {
+  return async dispatch => {
     if (targetTime == null) {
       return;
     }
 
-    const event = mostRecentPaintOrMouseEvent(targetTime);
-
-    if (event) {
-      // Seek to the exact time provided, even if it does not match up with a
-      // paint event. This can cause some slight UI weirdness: resumes done in
-      // the debugger will be relative to the point instead of the time,
-      // so e.g. running forward could land at a point before the time itself.
-      // This could be fixed but doesn't seem worth worrying about for now.
-      dispatch(seek(event.point, targetTime, false));
+    // @ts-ignore
+    const { point } = await sendMessage(
+      // @ts-ignore
+      "Session.getPointNearTime",
+      { time: targetTime },
+      ThreadFront.sessionId!
+    );
+    if (point) {
+      if (!dispatch(seek(point.point, point.time, false))) {
+        // if seeking to the new point failed because it is in an unloaded region,
+        // we reset the timeline back to the current time
+        setTimelineToTime(ThreadFront.currentTime);
+        setTimelineState({ currentTime: ThreadFront.currentTime });
+      }
     }
   };
 }

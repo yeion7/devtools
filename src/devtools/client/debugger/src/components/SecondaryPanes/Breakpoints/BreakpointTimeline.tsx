@@ -84,7 +84,7 @@ function BreakpointTimeline({
 
     const event = mostRecentPaintOrMouseEvent(hoveredTime);
     if (event && event.point) {
-      seek(event.point, hoveredTime, false);
+      seek(event.point, event.time, false);
     }
   };
   const onMouseMove = (e: React.MouseEvent) => {

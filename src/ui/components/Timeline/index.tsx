@@ -1,4 +1,3 @@
-import { mostRecentPaintOrMouseEvent } from "protocol/graphics";
 import { ThreadFront } from "protocol/thread/thread";
 import React, { useLayoutEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -20,6 +19,7 @@ import PreviewMarkers from "./PreviewMarkers";
 import ProgressBars from "./ProgressBars";
 import Tooltip from "./Tooltip";
 import UnfocusedRegion from "./UnfocusedRegion";
+import { sendMessage } from "protocol/socket";
 
 export type EditMode = {
   dragOffset?: number;
@@ -59,7 +59,7 @@ export default function Timeline() {
     };
   }, [dispatch]);
 
-  const onClick = (event: React.MouseEvent) => {
+  const onClick = async (event: React.MouseEvent) => {
     const mouseTime = getTimeFromPosition(event.pageX, progressBarRef.current!, zoomRegion);
     const isOutsideFocusRegion =
       focusRegion && (mouseTime < focusRegion.startTime || mouseTime > focusRegion.endTime);
@@ -68,9 +68,15 @@ export default function Timeline() {
       return;
     }
 
-    const paintOrMouseEvent = mostRecentPaintOrMouseEvent(mouseTime);
-    if (paintOrMouseEvent?.point) {
-      if (!dispatch(seek(paintOrMouseEvent.point, mouseTime, false))) {
+    // @ts-ignore
+    const { point } = await sendMessage(
+      // @ts-ignore
+      "Session.getPointNearTime",
+      { time: mouseTime },
+      ThreadFront.sessionId!
+    );
+    if (point) {
+      if (!dispatch(seek(point.point, point.time, false))) {
         // if seeking to the new point failed because it is in an unloaded region,
         // we reset the timeline back to the current time
         setTimelineToTime(ThreadFront.currentTime);
