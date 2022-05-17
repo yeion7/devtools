@@ -20,7 +20,7 @@ import { AnalysisError } from "ui/state/app";
 import { prefs } from "ui/utils/prefs";
 import { setBreakpointOptions } from "devtools/client/debugger/src/actions/breakpoints";
 import { getContext } from "devtools/client/debugger/src/selectors";
-import { getLoadedAndIndexedProgress, getLoadedRegions } from "ui/reducers/app";
+import { getIsIndexed, getLoadedAndIndexedProgress, getLoadedRegions } from "ui/reducers/app";
 
 function getPanelWidth({ editor }) {
   // The indent value is an adjustment for the distance from the gutter's left edge
@@ -53,13 +53,13 @@ function Panel({
     !!analysisPoints?.data.find(
       ({ point, time }) => point == executionPoint && time == currentTime
     );
-  const loadingFinished = useSelector(getLoadedAndIndexedProgress);
+  const isIndexed = useSelector(getIsIndexed);
   const loadedRegions = useSelector(getLoadedRegions);
   const loadedRegionsKey = `${loadedRegions.loading[0].begin.point}:${loadedRegions.loading[0].end.point}`;
   const previousLoadingKey = useRef(loadedRegionsKey);
   useEffect(() => {
-    console.log({ loadingFinished, previousLoadingKey });
-    if (loadingFinished && previousLoadingKey !== loadedRegionsKey) {
+    console.log({ isIndexed, previousLoadingKey });
+    if (isIndexed && previousLoadingKey !== loadedRegionsKey) {
       console.log("DISPATCH ANOTHER");
       dispatch(setBreakpointOptions(cx, breakpoint.location, breakpoint.options));
     }
@@ -70,7 +70,7 @@ function Panel({
     cx,
     dispatch,
     loadedRegionsKey,
-    loadingFinished,
+    isIndexed,
     previousLoadingKey,
   ]);
   const isHot =
