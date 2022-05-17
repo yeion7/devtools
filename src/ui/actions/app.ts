@@ -1,5 +1,6 @@
+import * as Sentry from "@sentry/browser";
 import { UIStore, UIThunkAction } from ".";
-import { unprocessedRegions, KeyboardEvent } from "@recordreplay/protocol";
+import { unprocessedRegions, KeyboardEvent, loadedRegions } from "@recordreplay/protocol";
 import * as selectors from "ui/reducers/app";
 import { Canvas, ReplayEvent, ReplayNavigationEvent } from "ui/state/app";
 import { client, sendMessage } from "protocol/socket";
@@ -20,7 +21,7 @@ import { openQuickOpen } from "devtools/client/debugger/src/actions/quick-open";
 import { getRecordingId } from "ui/utils/recording";
 import { prefs } from "devtools/client/debugger/src/utils/prefs";
 import { shallowEqual } from "devtools/client/debugger/src/utils/resource/compare";
-import type { ThreadFront as ThreadFrontType } from "protocol/thread";
+import { ThreadFront, ThreadFront as ThreadFrontType } from "protocol/thread";
 import { getShowVideoPanel } from "ui/reducers/layout";
 import { toggleFocusMode } from "./timeline";
 import { getTheme } from "ui/reducers/app";
@@ -42,6 +43,10 @@ import {
   setIsNodePickerActive,
   setCanvas as setCanvasAction,
 } from "../reducers/app";
+import { getConsoleOverflow } from "devtools/client/webconsole/selectors";
+import { onConsoleMessage } from "devtools/client/webconsole/actions/messages";
+import { onConsoleOverflow } from "./session";
+import { consoleReloaded, messagesLoaded } from "devtools/client/webconsole/reducers/messages";
 
 const supportsPerformanceNow =
   typeof performance !== "undefined" && typeof performance.now === "function";
@@ -52,6 +57,30 @@ function now(): number {
   }
   return Date.now();
 }
+
+const refetchData = (loadedRegions: loadedRegions): UIThunkAction => {
+  return (dispatch, getState) => {
+    const state = getState();
+    // If we are now fully loaded, but we were not before, then we should
+    // refetch some stuff, including overflowing console logs, for instance.
+    if (getIsIndexed(state)) {
+      if (getConsoleOverflow(state)) {
+        dispatch(consoleReloaded());
+        console.log("REFINDING");
+        sendMessage(
+          "Console.findMessagesInRange",
+          {
+            range: {
+              begin: loadedRegions.loading[0].begin.point,
+              end: loadedRegions.loading[0].end.point,
+            },
+          },
+          ThreadFront.sessionId!
+        ).then(() => dispatch(messagesLoaded()), Sentry.captureException);
+      }
+    }
+  };
+};
 
 export function setupApp(store: UIStore, ThreadFront: typeof ThreadFrontType) {
   if (!isTest()) {
@@ -116,6 +145,7 @@ export function setupApp(store: UIStore, ThreadFront: typeof ThreadFrontType) {
   ThreadFront.listenForLoadChanges(parameters => {
     lastLoadChangeUpdateTime = now();
 
+    store.dispatch(refetchData(parameters));
     store.dispatch(setLoadedRegions(parameters));
   });
 }

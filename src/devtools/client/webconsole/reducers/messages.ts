@@ -265,6 +265,10 @@ const messagesSlice = createSlice({
     consoleOverflowed(state) {
       state.overflow = true;
     },
+    consoleReloaded(state) {
+      state.overflow = false;
+      state.messagesLoaded = false;
+    },
     exceptionLogpointErrorCleared(state) {
       state.exceptionLogpointError = null;
     },
@@ -306,6 +310,7 @@ const messagesSlice = createSlice({
 
 export const {
   consoleOverflowed,
+  consoleReloaded,
   filterStateUpdated,
   logpointMessagesCleared,
   messageClosed,
