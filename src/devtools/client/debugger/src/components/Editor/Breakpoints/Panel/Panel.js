@@ -2,12 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at <http://mozilla.org/MPL/2.0/>. */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import classnames from "classnames";
 import PanelEditor from "./PanelEditor";
 import BreakpointNavigation from "devtools/client/debugger/src/components/SecondaryPanes/Breakpoints/BreakpointNavigation";
 import Widget from "./Widget";
-import { connect } from "react-redux";
+import { connect, useDispatch, useSelector } from "react-redux";
 import { actions } from "ui/actions";
 import { selectors } from "ui/reducers";
 import { getExecutionPoint } from "devtools/client/debugger/src/reducers/pause";
@@ -18,6 +18,9 @@ import hooks from "ui/hooks";
 import { Nag } from "ui/hooks/users";
 import { AnalysisError } from "ui/state/app";
 import { prefs } from "ui/utils/prefs";
+import { setBreakpointOptions } from "devtools/client/debugger/src/actions/breakpoints";
+import { getContext } from "devtools/client/debugger/src/selectors";
+import { getLoadedAndIndexedProgress, getLoadedRegions } from "ui/reducers/app";
 
 function getPanelWidth({ editor }) {
   // The indent value is an adjustment for the distance from the gutter's left edge
@@ -31,12 +34,14 @@ function Panel({
   analysisPoints,
   breakpoint,
   currentTime,
+  cx,
   editor,
   executionPoint,
   insertAt,
   setHoveredItem,
   clearHoveredItem,
 }) {
+  const dispatch = useDispatch();
   const [editing, setEditing] = useState(false);
   const [showCondition, setShowCondition] = useState(Boolean(breakpoint.options.condition)); // nosemgrep
   const [width, setWidth] = useState(getPanelWidth(editor)); // nosemgrep
@@ -48,6 +53,26 @@ function Panel({
     !!analysisPoints?.data.find(
       ({ point, time }) => point == executionPoint && time == currentTime
     );
+  const loadingFinished = useSelector(getLoadedAndIndexedProgress);
+  const loadedRegions = useSelector(getLoadedRegions);
+  const loadedRegionsKey = `${loadedRegions.loading[0].begin.point}:${loadedRegions.loading[0].end.point}`;
+  const previousLoadingKey = useRef(loadedRegionsKey);
+  useEffect(() => {
+    console.log({ loadingFinished, previousLoadingKey });
+    if (loadingFinished && previousLoadingKey !== loadedRegionsKey) {
+      console.log("DISPATCH ANOTHER");
+      dispatch(setBreakpointOptions(cx, breakpoint.location, breakpoint.options));
+    }
+    previousLoadingKey.current = loadedRegionsKey;
+  }, [
+    breakpoint.options,
+    breakpoint.location,
+    cx,
+    dispatch,
+    loadedRegionsKey,
+    loadingFinished,
+    previousLoadingKey,
+  ]);
   const isHot =
     analysisPoints &&
     (analysisPoints.error === AnalysisError.TooManyPoints ||
@@ -135,6 +160,7 @@ function Panel({
 
 export default connect(
   (state, { breakpoint }) => ({
+    cx: getContext(state),
     analysisPoints: selectors.getAnalysisPointsForLocation(
       state,
       breakpoint.location,
