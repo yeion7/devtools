@@ -41,6 +41,7 @@ import groupBy from "lodash/groupBy";
 import uniqueId from "lodash/uniqueId";
 
 import { MappedLocationCache } from "../mapped-location-cache";
+import ScopeMapCache from "../scope-map-cache";
 import { client, log, addEventListener, sendMessage } from "../socket";
 import { defer, assert, EventEmitter, ArrayMap } from "../utils";
 
@@ -178,6 +179,8 @@ class _ThreadFront {
   onSource: ((source: newSource) => void) | undefined;
 
   mappedLocations = new MappedLocationCache();
+
+  scopeMaps = new ScopeMapCache();
 
   // Points which will be reached when stepping in various directions from a point.
   resumeTargets = new Map<string, PauseDescription>();
@@ -729,6 +732,10 @@ class _ThreadFront {
     return await pause.getScopes(frameId);
   }
 
+  getScopeMap(location: Location): Promise<Record<string, string>> {
+    return this.scopeMaps.getScopeMap(location);
+  }
+
   async evaluate({
     asyncIndex,
     text,
@@ -1139,6 +1146,17 @@ class _ThreadFront {
       return locations.find(l => l.sourceId == alternateId);
     }
     return null;
+  }
+
+  getGeneratedLocation(locations: MappedLocation) {
+    const sourceIds = new Set<SourceId>(locations.map(location => location.sourceId));
+    return locations.find(location => {
+      const generated = this.getGeneratedSourceIds(location.sourceId);
+      if (!generated) {
+        return true;
+      }
+      return !generated.some(generatedId => sourceIds.has(generatedId));
+    });
   }
 
   // Get the source which should be used in the devtools from an array of
