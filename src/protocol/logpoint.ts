@@ -22,6 +22,7 @@ import { ProtocolError } from "ui/state/app";
 
 const { prefs } = require("ui/utils/prefs");
 
+// This seems like something that we probably have better patterns for now?
 // Hooks for adding messages to the console.
 export const LogpointHandlers: {
   onResult?: (
@@ -223,27 +224,28 @@ export async function setLogpoint(
   logGroupId: string,
   location: Location,
   text: string,
-  condition: string,
-  showInConsole: boolean = true
+  condition: string
 ) {
   await ThreadFront.ensureAllSources();
   const sourceIds = ThreadFront.getCorrespondingSourceIds(location.sourceId);
   const { line, column } = location;
   const locations = sourceIds.map(sourceId => ({ sourceId, line, column }));
-  setMultiSourceLogpoint(logGroupId, locations, text, condition, showInConsole);
+  setMultiSourceLogpoint(logGroupId, locations, text, condition);
 }
 
+// This should really be a thunk that creates a Breakpoint in the breakpoints
+// slice, and an accompanying analysis in the analysis slice, and those two can
+// watch *each other* to be informed of actions they might need to take.
 async function setMultiSourceLogpoint(
   logGroupId: string,
   locations: Location[],
   text: string,
-  condition: string,
-  showInConsole: boolean = true
+  condition: string
 ) {
   const primitives = primitiveValues(text);
   const primitiveFronts = primitives?.map(literal => createPrimitiveValueFront(literal));
 
-  if (showInConsole && primitiveFronts) {
+  if (primitiveFronts) {
     const points = getAnalysisPointsForLocation(store.getState(), locations[0], condition);
     if (points) {
       if (!points.error) {
@@ -271,7 +273,7 @@ async function setMultiSourceLogpoint(
 
   handler.onAnalysisPoints = newPoints => {
     points.push(...newPoints);
-    if (showInConsole && !condition) {
+    if (!condition) {
       if (primitiveFronts) {
         showPrimitiveLogpoints(logGroupId, newPoints, primitiveFronts);
       } else {
@@ -280,11 +282,11 @@ async function setMultiSourceLogpoint(
     }
   };
 
-  const shouldGetResults = condition || (showInConsole && !primitives);
+  const shouldGetResults = condition || (!primitives && points.length < 200);
   if (shouldGetResults) {
     handler.onAnalysisResult = result => {
       results.push(...result);
-      if (showInConsole && (condition || !primitives)) {
+      if (condition || !primitives) {
         showLogpointsResult(logGroupId, result);
       }
     };
@@ -348,15 +350,14 @@ export function setLogpointByURL(
   line: number,
   column: number,
   text: string,
-  condition: string,
-  showInConsole: boolean = true
+  condition: string
 ) {
   const sourceIds = ThreadFront.getChosenSourceIdsForUrl(url).map(({ sourceId }) => sourceId);
   if (sourceIds.length === 0) {
     return;
   }
   const locations = sourceIds.map(sourceId => ({ sourceId, line, column }));
-  setMultiSourceLogpoint(logGroupId, locations, text, condition, showInConsole);
+  setMultiSourceLogpoint(logGroupId, locations, text, condition);
 }
 
 const eventTypePoints: Record<string, PointDescription[]> = {};
